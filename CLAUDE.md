@@ -60,11 +60,23 @@ set runtimepath+=~/src/hubreview
 
 ## Key Bindings (in PR buffers)
 
-- `<CR>` - Open PR under cursor (in list) / Jump to comment location
-- `]f` / `[f` - Next/previous file (in diff)
-- `<leader>cc` - Add comment (in diff)
-- `<leader>cs` - Submit comment (in comment edit)
+**PR list:**
+- `<CR>` - Open PR under cursor
+
+**Diff view:**
+- `o` - Open file at current line
+- `]f` / `[f` - Next/previous file
+- `:cnext` / `:cprev` - Navigate files via quickfix list
+- `<leader>cc` - Add comment
+- `q` - Close diff
+
+**Comments view:**
+- `<CR>` - Jump to comment location
 - `q` - Close buffer
+
+**Comment edit:**
+- `<leader>cs` - Submit comment
+- `q` - Cancel
 
 ## JSON-RPC Methods
 
