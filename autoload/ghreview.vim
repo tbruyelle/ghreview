@@ -296,6 +296,14 @@ function! ghreview#prev_file() abort
   call s:show_current_file()
 endfunction
 
+function! ghreview#refresh_diff() abort
+  if empty(s:diff_files)
+    echo 'No diff loaded'
+    return
+  endif
+  call s:show_current_file()
+endfunction
+
 function! ghreview#close_diff() abort
   bdelete
   let s:current_pr = {}

@@ -23,6 +23,9 @@ command! -nargs=? PRReview call ghreview#review(<q-args>)
 " Keymaps for PR buffers (set in ftplugin or after buffer creation)
 augroup ghreview
   autocmd!
+  " Intercept :e on ghreview:// buffers to refresh instead of clearing
+  autocmd BufReadCmd ghreview://diff/* call ghreview#refresh_diff()
+  " Keymaps for PR buffers
   autocmd FileType ghreview-list nnoremap <buffer> <CR> :call ghreview#open_pr_under_cursor()<CR>
   autocmd FileType ghreview-list nnoremap <buffer> q :bdelete<CR>
   autocmd FileType ghreview-diff nnoremap <buffer> ]f :call ghreview#next_file()<CR>
