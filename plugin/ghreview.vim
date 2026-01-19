@@ -25,6 +25,8 @@ augroup ghreview
   autocmd!
   " Intercept :e on ghreview:// buffers to refresh instead of clearing
   autocmd BufReadCmd ghreview://diff/* call ghreview#refresh_diff()
+  " Sync file index when entering a diff buffer (for :cnext/:cprev support)
+  autocmd BufEnter ghreview://diff/* call ghreview#sync_file_idx()
   " Keymaps for PR buffers
   autocmd FileType ghreview-list nnoremap <buffer> <CR> :call ghreview#open_pr_under_cursor()<CR>
   autocmd FileType ghreview-list nnoremap <buffer> q :bdelete<CR>

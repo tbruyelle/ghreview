@@ -10,6 +10,7 @@ let s:current_repo = ''
 let s:diff_files = []
 let s:current_file_idx = 0
 let s:pending_comment = {}
+let s:showing_file = 0
 
 " Initialize the channel to the ghreview binary
 function! s:ensure_channel() abort
@@ -222,7 +223,38 @@ function! s:on_pr_diff(result) abort
     return
   endif
 
+  " First show the diff
   call s:show_current_file()
+
+  " Then populate and open quickfix list
+  call s:populate_qflist()
+endfunction
+
+function! s:populate_qflist() abort
+  let qf_items = []
+  let idx = 0
+  for file in s:diff_files
+    let status_text = file.filename . ' | ' . file.status . ' (+' . file.additions . ' -' . file.deletions . ')'
+    call add(qf_items, {
+          \ 'filename': 'ghreview://diff/' . file.filename,
+          \ 'lnum': 1,
+          \ 'text': status_text,
+          \ 'nr': idx + 1,
+          \ })
+    let idx += 1
+  endfor
+
+  call setqflist([], 'r', {
+        \ 'title': 'PR #' . s:current_pr.number . ': ' . s:current_pr.title,
+        \ 'items': qf_items,
+        \ })
+
+  " Remember current window (the diff window)
+  let diff_win = winnr()
+  " Open qflist window
+  copen
+  " Return focus to diff window
+  execute diff_win . 'wincmd w'
 endfunction
 
 function! s:show_current_file() abort
@@ -235,6 +267,9 @@ function! s:show_current_file() abort
 
   let file = s:diff_files[s:current_file_idx]
 
+  " Prevent BufReadCmd from re-entering
+  let s:showing_file = 1
+
   " Create diff buffer (use edit to take full screen, not split)
   let bufname = 'ghreview://diff/' . file.filename
   let bufnr = bufnr(bufname)
@@ -243,6 +278,8 @@ function! s:show_current_file() abort
   else
     execute 'buffer ' . bufnr
   endif
+
+  let s:showing_file = 0
 
   setlocal buftype=nofile
   setlocal bufhidden=hide
@@ -289,18 +326,50 @@ endfunction
 function! ghreview#next_file() abort
   let s:current_file_idx += 1
   call s:show_current_file()
+  " Sync qflist position without jumping (to avoid triggering BufReadCmd)
+  call setqflist([], 'a', {'idx': s:current_file_idx + 1})
 endfunction
 
 function! ghreview#prev_file() abort
   let s:current_file_idx -= 1
   call s:show_current_file()
+  " Sync qflist position without jumping (to avoid triggering BufReadCmd)
+  call setqflist([], 'a', {'idx': s:current_file_idx + 1})
+endfunction
+
+" Sync s:current_file_idx from buffer name (called on BufEnter)
+function! ghreview#sync_file_idx() abort
+  if s:showing_file || empty(s:diff_files)
+    return
+  endif
+
+  let bufname = expand('%')
+  let filename = substitute(bufname, '^ghreview://diff/', '', '')
+
+  let idx = 0
+  for file in s:diff_files
+    if file.filename == filename
+      let s:current_file_idx = idx
+      return
+    endif
+    let idx += 1
+  endfor
 endfunction
 
 function! ghreview#refresh_diff() abort
+  " Skip if we're already in the process of showing a file (avoid recursion)
+  if s:showing_file
+    return
+  endif
+
   if empty(s:diff_files)
     echo 'No diff loaded'
     return
   endif
+
+  " Sync file index from buffer name
+  call ghreview#sync_file_idx()
+
   call s:show_current_file()
 endfunction
 
@@ -308,6 +377,9 @@ function! ghreview#close_diff() abort
   bdelete
   let s:current_pr = {}
   let s:diff_files = []
+  " Clear qflist
+  call setqflist([], 'r')
+  cclose
 endfunction
 
 " Show comments
