@@ -235,11 +235,11 @@ function! s:show_current_file() abort
 
   let file = s:diff_files[s:current_file_idx]
 
-  " Create diff buffer
+  " Create diff buffer (use edit to take full screen, not split)
   let bufname = 'ghreview://diff/' . file.filename
   let bufnr = bufnr(bufname)
   if bufnr == -1
-    execute 'new ' . fnameescape(bufname)
+    execute 'edit ' . fnameescape(bufname)
   else
     execute 'buffer ' . bufnr
   endif
