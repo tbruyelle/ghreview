@@ -256,7 +256,7 @@ function! s:show_current_file() abort
   call append(0, '# PR #' . s:current_pr.number . ': ' . s:current_pr.title)
   call append(1, '# File ' . (s:current_file_idx + 1) . '/' . len(s:diff_files) . ': ' . file.filename)
   call append(2, '# Status: ' . file.status . ' (+' . file.additions . ' -' . file.deletions . ')')
-  call append(3, '# Navigation: ]f next file, [f prev file, <leader>cc comment, q close')
+  call append(3, '# Navigation: <CR> open file, ]f/[f next/prev file, <leader>cc comment, q close')
   call append(4, '')
 
   " Patch content
@@ -408,6 +408,33 @@ function! ghreview#goto_comment() abort
   if filereadable(filepath)
     execute 'edit ' . fnameescape(filepath)
     call cursor(linenum, 1)
+  else
+    echo 'File not found: ' . filepath
+  endif
+endfunction
+
+" Open file at line from diff view
+function! ghreview#open_file_at_line() abort
+  if s:current_file_idx >= len(s:diff_files)
+    echo 'No file selected'
+    return
+  endif
+
+  let cursor_line = line('.')
+  let linenum = s:get_diff_line_number(cursor_line)
+
+  if linenum <= 0
+    echo 'Cannot determine line number - place cursor on a code line'
+    return
+  endif
+
+  let file = s:diff_files[s:current_file_idx]
+  let filepath = file.filename
+
+  if filereadable(filepath)
+    execute 'edit ' . fnameescape(filepath)
+    call cursor(linenum, 1)
+    normal! zz
   else
     echo 'File not found: ' . filepath
   endif

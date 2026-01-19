@@ -29,6 +29,7 @@ augroup ghreview
   autocmd FileType ghreview-diff nnoremap <buffer> [f :call ghreview#prev_file()<CR>
   autocmd FileType ghreview-diff nnoremap <buffer> q :call ghreview#close_diff()<CR>
   autocmd FileType ghreview-diff nnoremap <buffer> <leader>cc :PRComment<CR>
+  autocmd FileType ghreview-diff nnoremap <buffer> <CR> :call ghreview#open_file_at_line()<CR>
   autocmd FileType ghreview-comments nnoremap <buffer> <CR> :call ghreview#goto_comment()<CR>
   autocmd FileType ghreview-comments nnoremap <buffer> q :bdelete<CR>
   autocmd FileType ghreview-comment-edit nnoremap <buffer> <leader>cs :call ghreview#submit_comment()<CR>
