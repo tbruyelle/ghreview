@@ -196,16 +196,51 @@ function! ghreview#open_pr_under_cursor() abort
   call ghreview#diff(pr_number)
 endfunction
 
+" Get PR number for current branch
+function! s:get_pr_for_branch() abort
+  let branch = trim(system('git branch --show-current 2>/dev/null'))
+  if v:shell_error != 0 || branch == ''
+    echoerr 'Not on a git branch'
+    return 0
+  endif
+
+  " Use gh CLI to find PR for this branch
+  let pr_json = system('gh pr view --json number 2>/dev/null')
+  if v:shell_error != 0
+    echoerr 'No PR found for branch: ' . branch
+    return 0
+  endif
+
+  try
+    let pr = json_decode(pr_json)
+    return pr.number
+  catch
+    echoerr 'Failed to parse PR info'
+    return 0
+  endtry
+endfunction
+
 " Show diff for a PR
-function! ghreview#diff(number) abort
+function! ghreview#diff(...) abort
   let repo = s:get_repo()
   if repo == ''
     return
   endif
 
-  let s:current_pr.number = a:number
-  echo 'Fetching diff for PR #' . a:number . '...'
-  call s:send_request('pr/diff', {'repo': repo, 'number': a:number}, function('s:on_pr_diff'))
+  " Get PR number from argument or detect from current branch
+  if a:0 > 0 && a:1 != ''
+    let number = a:1
+  else
+    echo 'Detecting PR for current branch...'
+    let number = s:get_pr_for_branch()
+    if number == 0
+      return
+    endif
+  endif
+
+  let s:current_pr.number = number
+  echo 'Fetching diff for PR #' . number . '...'
+  call s:send_request('pr/diff', {'repo': repo, 'number': number}, function('s:on_pr_diff'))
 endfunction
 
 function! s:on_pr_diff(result) abort

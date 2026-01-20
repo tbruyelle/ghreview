@@ -15,7 +15,7 @@ endif
 
 " Commands
 command! -nargs=? PRList call ghreview#list(<q-args>)
-command! -nargs=1 PRDiff call ghreview#diff(<args>)
+command! -nargs=? PRDiff call ghreview#diff(<args>)
 command! PRComments call ghreview#comments()
 command! PRComment call ghreview#add_comment()
 command! -nargs=? PRReview call ghreview#review(<q-args>)
