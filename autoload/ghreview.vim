@@ -258,11 +258,39 @@ function! s:on_pr_diff(result) abort
     return
   endif
 
+  " Checkout the PR branch
+  call s:checkout_pr_branch(a:result.head_branch)
+
   " First show the diff
   call s:show_current_file()
 
   " Then populate and open quickfix list
   call s:populate_qflist()
+endfunction
+
+function! s:checkout_pr_branch(branch) abort
+  if a:branch == ''
+    return
+  endif
+
+  let current_branch = trim(system('git branch --show-current 2>/dev/null'))
+  if current_branch == a:branch
+    return
+  endif
+
+  echo 'Checking out branch: ' . a:branch . '...'
+  let output = system('git checkout ' . shellescape(a:branch) . ' 2>&1')
+  if v:shell_error != 0
+    " Try to fetch and checkout if branch doesn't exist locally
+    let output = system('git fetch origin ' . shellescape(a:branch) . ' && git checkout ' . shellescape(a:branch) . ' 2>&1')
+    if v:shell_error != 0
+      echohl WarningMsg
+      echo 'Could not checkout branch ' . a:branch . ': ' . trim(output)
+      echohl None
+      return
+    endif
+  endif
+  echo 'Switched to branch: ' . a:branch
 endfunction
 
 function! s:populate_qflist() abort
