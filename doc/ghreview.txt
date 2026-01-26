@@ -22,7 +22,7 @@ Build and install the binary:
 <
 Add to your vimrc:
 >
-    Plug 'github.com/tbruyelle/ghreview'
+    Plug 'tbruyelle/ghreview'
 <
 COMMANDS                                        *ghreview-commands*
 

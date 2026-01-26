@@ -49,7 +49,7 @@ Navigate to a git repository with a GitHub remote, then:
 | Command | Description |
 |---------|-------------|
 | `:PRList` | List open PRs |
-| `:PRList all` | List all PRs |
+| `:PRList` | List all PRs |
 | `:PRDiff 123` | View diff for PR #123 |
 | `:PRComments` | View comments on current PR |
 | `:PRComment` | Add comment on current line |
