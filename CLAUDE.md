@@ -1,5 +1,12 @@
 # ghreview - GitHub PR Review Plugin for Vim
 
+## IMPORTANT - Mandatory actions
+
+**BEFORE EACH COMMIT**, you must
+- update documentation in `/doc` if necessary
+- update README if necessary
+- include modifications above in the commit
+
 ## Project Overview
 
 Vim 8+ plugin with a Go backend for reviewing GitHub Pull Requests directly in Vim. Communication happens via JSON-RPC over stdin/stdout.
@@ -41,11 +48,9 @@ Vim 8+ plugin with a Go backend for reviewing GitHub Pull Requests directly in V
 make install    # Installs binary to $GOPATH/bin/ghreview
 ```
 
-Add to .vimrc:
+Install with vim-plug:
 ```vim
-Plug '~/src/hubreview'
-" or
-set runtimepath+=~/src/hubreview
+Plug 'github.com/tbruyelle/ghreview'
 ```
 
 ## Vim Commands

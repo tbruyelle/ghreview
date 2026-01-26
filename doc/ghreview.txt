@@ -1,0 +1,102 @@
+*ghreview.txt*  GitHub PR Review plugin for Vim
+
+Author:  Thomas Bruyelle
+License: Same terms as Vim itself (see |license|)
+
+INTRODUCTION                                    *ghreview*
+
+ghreview is a Vim 8+ plugin for reviewing GitHub Pull Requests directly in
+Vim. It uses a Go backend that communicates via JSON-RPC over stdin/stdout.
+
+REQUIREMENTS                                    *ghreview-requirements*
+
+- Vim 8+ with |+channel| and |+job| features
+- Go 1.21+ (for building the binary)
+- GitHub CLI (`gh`) authenticated
+
+INSTALLATION                                    *ghreview-install*
+
+Build and install the binary:
+>
+    make install
+<
+Add to your vimrc:
+>
+    Plug 'github.com/tbruyelle/ghreview'
+<
+COMMANDS                                        *ghreview-commands*
+
+                                                *:PRList*
+:PRList [state]         List pull requests. Optional [state] can be "open"
+                        (default), "closed", or "all".
+
+                                                *:PRDiff*
+:PRDiff [number]        View the diff for a pull request. If [number] is
+                        omitted, detects the PR for the current branch.
+
+                                                *:PRComments*
+:PRComments             View comments on the current PR. Requires |:PRDiff|
+                        to be run first.
+
+                                                *:PRComment*
+:PRComment              Add a comment on the current line in the diff view.
+                        Requires |:PRDiff| to be run first.
+
+                                                *:PRReview*
+:PRReview [event]       Submit a review for the current PR. Optional [event]
+                        can be "APPROVE", "REQUEST_CHANGES", or "COMMENT".
+                        If omitted, shows an interactive menu.
+
+MAPPINGS                                        *ghreview-mappings*
+
+PR List buffer~
+                                                *ghreview-list-mappings*
+<CR>                    Open the PR under the cursor.
+q                       Close the PR list buffer.
+
+Diff view~
+                                                *ghreview-diff-mappings*
+o                       Open the file at the current line.
+]f                      Go to the next file in the diff.
+[f                      Go to the previous file in the diff.
+<Leader>cc              Add a comment on the current line.
+q                       Close the diff and quickfix list.
+
+You can also use |:cnext| and |:cprev| to navigate files via the quickfix
+list.
+
+Comments view~
+                                                *ghreview-comments-mappings*
+<CR>                    Jump to the comment location in the file.
+q                       Close the comments buffer.
+
+Comment edit~
+                                                *ghreview-comment-edit-mappings*
+<Leader>cs              Submit the comment.
+q                       Cancel and close the buffer.
+
+CONFIGURATION                                   *ghreview-config*
+
+                                                *g:ghreview_binary*
+g:ghreview_binary       Path to the ghreview binary. Default is
+                        $GOPATH/bin/ghreview (or ~/go/bin/ghreview).
+>
+    let g:ghreview_binary = '/custom/path/to/ghreview'
+<
+TROUBLESHOOTING                                 *ghreview-troubleshooting*
+
+Binary not found~
+Make sure the binary is built and installed:
+>
+    make install
+<
+Authentication errors~
+Ensure GitHub CLI is authenticated:
+>
+    gh auth login
+<
+No PR found for branch~
+The current branch must have an associated PR on GitHub. Create a PR first
+or specify the PR number explicitly with |:PRDiff|.
+
+ vim:tw=78:ts=8:ft=help:norl:
