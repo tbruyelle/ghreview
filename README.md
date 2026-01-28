@@ -66,6 +66,7 @@ Navigate to a git repository with a GitHub remote, then:
 - `]f` / `[f` - Next/previous file
 - `:cnext` / `:cprev` - Navigate files via quickfix list
 - `<leader>cc` - Add comment on current line
+- `<leader>cr` - Submit review
 - `q` - Close
 
 **In comments buffer:**
