@@ -6,7 +6,7 @@ let s:channel = v:null
 let s:request_id = 0
 let s:callbacks = {}
 let s:current_pr = {}
-let s:current_repo = ''
+let s:current_remote = 'origin'
 let s:diff_files = []
 let s:current_file_idx = 0
 let s:pending_comment = {}
@@ -101,41 +101,33 @@ function! s:on_error(channel, msg) abort
   echoerr 'ghreview error: ' . a:msg
 endfunction
 
-" Get the current repository (owner/repo)
+" Get the current repository (owner/repo) from s:current_remote
 function! s:get_repo() abort
-  if s:current_repo != ''
-    return s:current_repo
-  endif
-
-  " Try to get from git remote
-  let remote = system('git remote get-url origin 2>/dev/null')
+  let remote_url = system('git remote get-url ' . shellescape(s:current_remote) . ' 2>/dev/null')
   if v:shell_error != 0
-    echoerr 'Not in a git repository or no origin remote'
+    echoerr 'Not in a git repository or no ' . s:current_remote . ' remote'
     return ''
   endif
-
-  " Parse GitHub URL
-  let remote = trim(remote)
-  let matches = matchlist(remote, 'github\.com[:/]\([^/]\+\)/\([^/.]\+\)')
+  let matches = matchlist(trim(remote_url), 'github\.com[:/]\([^/]\+\)/\([^/.]\+\)')
   if len(matches) < 3
-    echoerr 'Could not parse GitHub repository from remote: ' . remote
+    echoerr 'Could not parse GitHub repository from remote: ' . trim(remote_url)
     return ''
   endif
-
-  let s:current_repo = matches[1] . '/' . matches[2]
-  return s:current_repo
+  return matches[1] . '/' . matches[2]
 endfunction
 
 " List PRs
+" Optional argument: remote name (default: 'origin')
 function! ghreview#list(...) abort
+  let s:current_remote = a:0 > 0 && a:1 != '' ? a:1 : 'origin'
+
   let repo = s:get_repo()
   if repo == ''
     return
   endif
 
-  let state = a:0 > 0 && a:1 != '' ? a:1 : 'open'
   echo 'Fetching PRs...'
-  call s:send_request('pr/list', {'repo': repo, 'state': state}, function('s:on_pr_list'))
+  call s:send_request('pr/list', {'repo': repo, 'state': 'open'}, function('s:on_pr_list'))
 endfunction
 
 function! s:on_pr_list(result) abort
@@ -163,7 +155,7 @@ function! s:on_pr_list(result) abort
   setlocal modifiable
   silent! %delete _
 
-  call append(0, '# Pull Requests - ' . s:current_repo)
+  call append(0, '# Pull Requests - ' . s:get_repo())
   call append(1, '')
   call append(2, printf('%-6s %-60s %-20s %-10s', '#', 'Title', 'Author', 'Updated'))
   call append(3, repeat('-', 100))

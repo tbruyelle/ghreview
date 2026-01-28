@@ -57,7 +57,7 @@ Plug 'github.com/tbruyelle/ghreview'
 
 | Command | Description |
 |---------|-------------|
-| `:PRList [state]` | List PRs (open/closed/all) |
+| `:PRList [remote]` | List open PRs (remote defaults to "origin") |
 | `:PRDiff {number}` | View PR diff |
 | `:PRComments` | View comments on current PR |
 | `:PRComment` | Add comment on current line |

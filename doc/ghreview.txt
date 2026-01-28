@@ -27,8 +27,10 @@ Add to your vimrc:
 COMMANDS                                        *ghreview-commands*
 
                                                 *:PRList*
-:PRList [state]         List pull requests. Optional [state] can be "open"
-                        (default), "closed", or "all".
+:PRList [remote]        List open pull requests. Optional [remote] specifies
+                        the git remote to use (default: "origin").
+                        Example: `:PRList upstream` to list PRs from the
+                        upstream remote.
 
                                                 *:PRDiff*
 :PRDiff [number]        View the diff for a pull request. If [number] is

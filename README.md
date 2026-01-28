@@ -48,12 +48,15 @@ Navigate to a git repository with a GitHub remote, then:
 
 | Command | Description |
 |---------|-------------|
-| `:PRList` | List open PRs |
-| `:PRList` | List all PRs |
+| `:PRList [remote]` | List open PRs (remote defaults to "origin") |
 | `:PRDiff 123` | View diff for PR #123 |
 | `:PRComments` | View comments on current PR |
 | `:PRComment` | Add comment on current line |
 | `:PRReview` | Submit a review |
+
+Examples:
+- `:PRList` - List open PRs from origin
+- `:PRList upstream` - List open PRs from upstream remote
 
 ## Key Bindings
 
