@@ -101,6 +101,27 @@ function! s:on_error(channel, msg) abort
   echoerr 'ghreview error: ' . a:msg
 endfunction
 
+" Wrap text at specified width, returns list of lines
+function! s:wrap_text(text, width) abort
+  let lines = []
+  let words = split(a:text, '\s\+')
+  let current = ''
+  for word in words
+    if current == ''
+      let current = word
+    elseif len(current) + 1 + len(word) <= a:width
+      let current .= ' ' . word
+    else
+      call add(lines, current)
+      let current = word
+    endif
+  endfor
+  if current != ''
+    call add(lines, current)
+  endif
+  return lines
+endfunction
+
 " Get the current repository (owner/repo) from s:current_remote
 function! s:get_repo() abort
   let remote_url = system('git remote get-url ' . shellescape(s:current_remote) . ' 2>/dev/null')
@@ -345,22 +366,49 @@ function! s:show_current_file() abort
   silent! %delete _
 
   " Header
-  call append(0, '# PR #' . s:current_pr.number . ': ' . s:current_pr.title)
-  call append(1, '# File ' . (s:current_file_idx + 1) . '/' . len(s:diff_files) . ': ' . file.filename)
-  call append(2, '# Status: ' . file.status . ' (+' . file.additions . ' -' . file.deletions . ')')
-  call append(3, '# Navigation: o open file, ]f/[f next/prev file, <leader>cc comment, <leader>cr review, q close')
-  call append(4, '')
+  let line = 0
+  call append(line, '# PR #' . s:current_pr.number . ': ' . s:current_pr.title)
+  let line += 1
+
+  " PR description/body
+  if has_key(s:current_pr, 'description') && s:current_pr.description != ''
+    call append(line, '#')
+    let line += 1
+    for desc_line in split(s:current_pr.description, '\n')
+      if desc_line == ''
+        call append(line, '#')
+        let line += 1
+      else
+        for wrapped in s:wrap_text(desc_line, 78)
+          call append(line, '# ' . wrapped)
+          let line += 1
+        endfor
+      endif
+    endfor
+  endif
+
+  call append(line, '#')
+  let line += 1
+  call append(line, '# File ' . (s:current_file_idx + 1) . '/' . len(s:diff_files) . ': ' . file.filename)
+  let line += 1
+  call append(line, '# Status: ' . file.status . ' (+' . file.additions . ' -' . file.deletions . ')')
+  let line += 1
+  call append(line, '# Navigation: o open file, ]f/[f next/prev file, <leader>cc comment, <leader>cr review, q close')
+  let line += 1
+  call append(line, '')
+  let line += 1
 
   " Patch content
+  let patch_start = line + 1
   if file.patch != ''
     let patch_lines = split(file.patch, '\n')
-    let line = 5
     for pline in patch_lines
       call append(line, pline)
       let line += 1
     endfor
   else
-    call append(5, '(binary file or no diff available)')
+    call append(line, '(binary file or no diff available)')
+    let line += 1
   endif
 
   setlocal nomodifiable
@@ -373,7 +421,7 @@ function! s:show_current_file() abort
   highlight link DiffDelete DiffDelete
   highlight link DiffChange DiffChange
 
-  call cursor(6, 1)
+  call cursor(patch_start, 1)
   redraw
   echo 'File ' . (s:current_file_idx + 1) . '/' . len(s:diff_files) . ': ' . file.filename
 endfunction
