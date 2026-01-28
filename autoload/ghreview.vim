@@ -437,12 +437,14 @@ function! ghreview#refresh_diff() abort
 endfunction
 
 function! ghreview#close_diff() abort
-  bdelete
+  " Clear state before deleting buffer to avoid autocmd issues
   let s:current_pr = {}
   let s:diff_files = []
   " Clear qflist
   call setqflist([], 'r')
   cclose
+  " Use noautocmd to prevent BufDelete autocmds (e.g., LSP) from firing on fake buffer
+  noautocmd bwipeout!
 endfunction
 
 " Show comments
