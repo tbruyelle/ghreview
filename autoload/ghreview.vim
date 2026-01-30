@@ -279,6 +279,9 @@ function! s:on_pr_diff(result) abort
 
   " Then populate and open quickfix list
   call s:populate_qflist()
+
+  " Force redraw since we're in an async callback
+  redraw
 endfunction
 
 function! s:checkout_pr_branch(branch) abort
