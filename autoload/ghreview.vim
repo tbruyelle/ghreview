@@ -236,6 +236,12 @@ endfunction
 
 " Show diff for a PR
 function! ghreview#diff(...) abort
+  " Check for unsaved changes
+  if &modified
+    echoerr 'Buffer has unsaved changes. Save before running :PRDiff'
+    return
+  endif
+
   let repo = s:get_repo()
   if repo == ''
     return
