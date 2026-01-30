@@ -30,8 +30,8 @@ augroup ghreview
   " Keymaps for PR buffers
   autocmd FileType ghreview-list nnoremap <buffer> <CR> :call ghreview#open_pr_under_cursor()<CR>
   autocmd FileType ghreview-list nnoremap <buffer> q :bdelete<CR>
-  autocmd FileType ghreview-diff nnoremap <buffer> ]f :call ghreview#next_file()<CR>
-  autocmd FileType ghreview-diff nnoremap <buffer> [f :call ghreview#prev_file()<CR>
+  autocmd FileType ghreview-diff nnoremap <buffer> <C-n> :call ghreview#next_file()<CR>
+  autocmd FileType ghreview-diff nnoremap <buffer> <C-m> :call ghreview#prev_file()<CR>
   autocmd FileType ghreview-diff nnoremap <buffer> q :call ghreview#close_diff()<CR>
   autocmd FileType ghreview-diff nnoremap <buffer> <leader>cc :PRComment<CR>
   autocmd FileType ghreview-diff xnoremap <buffer> <leader>cc :PRComment<CR>

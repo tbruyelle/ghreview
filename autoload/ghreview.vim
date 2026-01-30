@@ -11,6 +11,7 @@ let s:diff_files = []
 let s:current_file_idx = 0
 let s:pending_comment = {}
 let s:showing_file = 0
+let s:patch_start_line = 1
 
 " Initialize the channel to the ghreview binary
 function! s:ensure_channel() abort
@@ -244,7 +245,6 @@ function! ghreview#diff(...) abort
   if a:0 > 0 && a:1 != ''
     let number = a:1
   else
-    echo 'Detecting PR for current branch...'
     let number = s:get_pr_for_branch()
     if number == 0
       return
@@ -252,7 +252,6 @@ function! ghreview#diff(...) abort
   endif
 
   let s:current_pr.number = number
-  echo 'Fetching diff for PR #' . number . '...'
   call s:send_request('pr/diff', {'repo': repo, 'number': number}, function('s:on_pr_diff'))
 endfunction
 
@@ -279,9 +278,6 @@ function! s:on_pr_diff(result) abort
 
   " Then populate and open quickfix list
   call s:populate_qflist()
-
-  " Force redraw since we're in an async callback
-  redraw
 endfunction
 
 function! s:checkout_pr_branch(branch) abort
@@ -294,11 +290,10 @@ function! s:checkout_pr_branch(branch) abort
     return
   endif
 
-  echo 'Checking out branch: ' . a:branch . '...'
-  let output = system('git checkout ' . shellescape(a:branch) . ' 2>&1')
+  silent let output = system('git checkout ' . shellescape(a:branch) . ' 2>&1')
   if v:shell_error != 0
     " Try to fetch and checkout if branch doesn't exist locally
-    let output = system('git fetch origin ' . shellescape(a:branch) . ' && git checkout ' . shellescape(a:branch) . ' 2>&1')
+    silent let output = system('git fetch origin ' . shellescape(a:branch) . ' && git checkout ' . shellescape(a:branch) . ' 2>&1')
     if v:shell_error != 0
       echohl WarningMsg
       echo 'Could not checkout branch ' . a:branch . ': ' . trim(output)
@@ -306,7 +301,6 @@ function! s:checkout_pr_branch(branch) abort
       return
     endif
   endif
-  echo 'Switched to branch: ' . a:branch
 endfunction
 
 function! s:populate_qflist() abort
@@ -316,7 +310,7 @@ function! s:populate_qflist() abort
     let status_text = file.filename . ' | ' . file.status . ' (+' . file.additions . ' -' . file.deletions . ')'
     call add(qf_items, {
           \ 'filename': 'ghreview://diff/' . file.filename,
-          \ 'lnum': 1,
+          \ 'lnum': s:patch_start_line,
           \ 'text': status_text,
           \ 'nr': idx + 1,
           \ })
@@ -326,14 +320,12 @@ function! s:populate_qflist() abort
   call setqflist([], 'r', {
         \ 'title': 'PR #' . s:current_pr.number . ': ' . s:current_pr.title,
         \ 'items': qf_items,
+        \ 'idx': 1,
         \ })
 
-  " Remember current window (the diff window)
-  let diff_win = winnr()
-  " Open qflist window
+  " Open qflist window, then return to previous window
   copen
-  " Return focus to diff window
-  execute diff_win . 'wincmd w'
+  wincmd p
 endfunction
 
 function! s:show_current_file() abort
@@ -353,9 +345,9 @@ function! s:show_current_file() abort
   let bufname = 'ghreview://diff/' . file.filename
   let bufnr = bufnr(bufname)
   if bufnr == -1
-    execute 'edit ' . fnameescape(bufname)
+    silent execute 'edit ' . fnameescape(bufname)
   else
-    execute 'buffer ' . bufnr
+    silent execute 'buffer ' . bufnr
   endif
 
   let s:showing_file = 0
@@ -401,8 +393,9 @@ function! s:show_current_file() abort
   call append(line, '')
   let line += 1
 
-  " Patch content
-  let patch_start = line + 1
+  " Patch content (store for qflist navigation)
+  let s:patch_start_line = line + 1
+  let patch_start = s:patch_start_line
   if file.patch != ''
     let patch_lines = split(file.patch, '\n')
     for pline in patch_lines
@@ -425,8 +418,7 @@ function! s:show_current_file() abort
   highlight link DiffChange DiffChange
 
   call cursor(patch_start, 1)
-  redraw
-  echo 'File ' . (s:current_file_idx + 1) . '/' . len(s:diff_files) . ': ' . file.filename
+  normal! zt
 endfunction
 
 function! ghreview#next_file() abort

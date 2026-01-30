@@ -66,7 +66,7 @@ Examples:
 
 **In diff buffer:**
 - `o` - Open file at current line
-- `]f` / `[f` - Next/previous file
+- `<C-n>` / `<C-m>` - Next/previous file
 - `:cnext` / `:cprev` - Navigate files via quickfix list
 - `<leader>cc` - Add comment (visual: pre-fill with GitHub suggestion)
 - `<leader>cr` - Submit review

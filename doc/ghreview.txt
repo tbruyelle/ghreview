@@ -59,8 +59,8 @@ q                       Close the PR list buffer.
 Diff view~
                                                 *ghreview-diff-mappings*
 o                       Open the file at the current line.
-]f                      Go to the next file in the diff.
-[f                      Go to the previous file in the diff.
+<C-n>                   Go to the next file in the diff.
+<C-m>                   Go to the previous file in the diff.
 <Leader>cc              Add a comment on the current line. In visual mode,
                         pre-fills the comment with a GitHub suggestion
                         containing the selected code.
