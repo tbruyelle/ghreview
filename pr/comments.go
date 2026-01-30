@@ -102,12 +102,13 @@ func (s *Service) Comments(params json.RawMessage) (interface{}, error) {
 
 // AddCommentParams represents parameters for adding a review comment
 type AddCommentParams struct {
-	Repo   string `json:"repo"`
-	Number int    `json:"number"`
-	Path   string `json:"path"`
-	Line   int    `json:"line"`
-	Body   string `json:"body"`
-	Side   string `json:"side,omitempty"` // LEFT or RIGHT (default)
+	Repo      string `json:"repo"`
+	Number    int    `json:"number"`
+	Path      string `json:"path"`
+	Line      int    `json:"line"`
+	StartLine int    `json:"start_line,omitempty"` // For multi-line comments
+	Body      string `json:"body"`
+	Side      string `json:"side,omitempty"` // LEFT or RIGHT (default)
 }
 
 // AddComment adds a review comment to a specific line in a PR
@@ -139,6 +140,10 @@ func (s *Service) AddComment(params json.RawMessage) (interface{}, error) {
 		CommitID: pr.Head.SHA,
 		Line:     github.Int(p.Line),
 		Side:     github.String(side),
+	}
+	if p.StartLine > 0 && p.StartLine != p.Line {
+		comment.StartLine = github.Int(p.StartLine)
+		comment.StartSide = comment.Side
 	}
 
 	created, _, err := s.client.PullRequests.CreateComment(s.client.Context(), owner, repo, p.Number, comment)

@@ -61,7 +61,9 @@ Diff view~
 o                       Open the file at the current line.
 ]f                      Go to the next file in the diff.
 [f                      Go to the previous file in the diff.
-<Leader>cc              Add a comment on the current line.
+<Leader>cc              Add a comment on the current line. In visual mode,
+                        pre-fills the comment with a GitHub suggestion
+                        containing the selected code.
 <Leader>cr              Submit a review for the current PR.
 q                       Close the diff and quickfix list.
 

@@ -626,7 +626,8 @@ function! ghreview#open_file_at_line() abort
 endfunction
 
 " Add a comment
-function! ghreview#add_comment() abort
+" When called with a range (visual selection), pre-fill with GitHub suggestion
+function! ghreview#add_comment(has_range, line1, line2) abort
   if !has_key(s:current_pr, 'number')
     echoerr 'No PR selected. Use :PRDiff first.'
     return
@@ -637,13 +638,19 @@ function! ghreview#add_comment() abort
     return
   endif
 
-  " Get current line number from the diff
-  let cursor_line = line('.')
+  " Get line numbers from the diff
+  let cursor_line = a:has_range ? a:line2 : line('.')
   let diff_line = s:get_diff_line_number(cursor_line)
 
   if diff_line <= 0
     echoerr 'Cannot add comment here - place cursor on a code line in the diff'
     return
+  endif
+
+  " For multi-line selection, also get the start line
+  let start_line = 0
+  if a:has_range && a:line1 != a:line2
+    let start_line = s:get_diff_line_number(a:line1)
   endif
 
   let file = s:diff_files[s:current_file_idx]
@@ -652,7 +659,24 @@ function! ghreview#add_comment() abort
   let s:pending_comment = {
         \ 'path': file.filename,
         \ 'line': diff_line,
+        \ 'start_line': start_line,
         \ }
+
+  " Get selected text for suggestion if range was given
+  let suggestion_lines = []
+  if a:has_range
+    let selected = getline(a:line1, a:line2)
+    for sline in selected
+      " Strip the diff prefix (+, -, space) from each line
+      if sline =~ '^[+ ]'
+        call add(suggestion_lines, sline[1:])
+      elseif sline !~ '^-'
+        " Keep lines that don't start with diff markers as-is
+        call add(suggestion_lines, sline)
+      endif
+      " Skip removed lines (starting with -)
+    endfor
+  endif
 
   " Open comment edit buffer
   let bufname = 'ghreview://comment-edit'
@@ -667,8 +691,20 @@ function! ghreview#add_comment() abort
   call append(1, '# Press <leader>cs to submit, q to cancel')
   call append(2, '')
 
-  call cursor(3, 1)
-  startinsert
+  " Pre-fill with GitHub suggestion if we have selected text
+  if len(suggestion_lines) > 0
+    call append(3, '```suggestion')
+    let line = 4
+    for sline in suggestion_lines
+      call append(line, sline)
+      let line += 1
+    endfor
+    call append(line, '```')
+    call cursor(5, 1)
+  else
+    call cursor(3, 1)
+    startinsert
+  endif
 endfunction
 
 function! s:get_diff_line_number(cursor_line) abort
@@ -727,6 +763,10 @@ function! ghreview#submit_comment() abort
         \ 'line': s:pending_comment.line,
         \ 'body': body,
         \ }
+
+  if has_key(s:pending_comment, 'start_line') && s:pending_comment.start_line > 0
+    let params.start_line = s:pending_comment.start_line
+  endif
 
   echo 'Submitting comment...'
   call s:send_request('pr/add_comment', params, function('s:on_comment_added'))

@@ -2,6 +2,8 @@
 
 ## IMPORTANT - Mandatory actions
 
+**WHEN ASKING USER TO TEST**, run `make install` first if Go code was modified.
+
 **BEFORE EACH COMMIT**, you must
 - update documentation in `/doc` if necessary
 - update README if necessary
@@ -72,7 +74,7 @@ Plug 'github.com/tbruyelle/ghreview'
 - `o` - Open file at current line
 - `]f` / `[f` - Next/previous file
 - `:cnext` / `:cprev` - Navigate files via quickfix list
-- `<leader>cc` - Add comment
+- `<leader>cc` - Add comment (visual: GitHub suggestion)
 - `q` - Close diff
 
 **Comments view:**
@@ -89,7 +91,7 @@ Plug 'github.com/tbruyelle/ghreview'
 {"method": "pr/list", "params": {"repo": "owner/repo", "state": "open"}}
 {"method": "pr/diff", "params": {"repo": "owner/repo", "number": 123}}
 {"method": "pr/comments", "params": {"repo": "owner/repo", "number": 123}}
-{"method": "pr/add_comment", "params": {"repo": "owner/repo", "number": 123, "path": "file.go", "line": 42, "body": "..."}}
+{"method": "pr/add_comment", "params": {"repo": "owner/repo", "number": 123, "path": "file.go", "line": 42, "start_line": 40, "body": "..."}}
 {"method": "pr/submit_review", "params": {"repo": "owner/repo", "number": 123, "event": "APPROVE", "body": "LGTM"}}
 ```
 
