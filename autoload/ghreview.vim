@@ -399,7 +399,7 @@ function! s:show_current_file() abort
   let line += 1
   call append(line, '# Status: ' . file.status . ' (+' . file.additions . ' -' . file.deletions . ')')
   let line += 1
-  call append(line, '# Navigation: o open file, ]f/[f next/prev file, <leader>cc comment, <leader>cr review, q close')
+  call append(line, '# Navigation: o open file, C-n/C-m next/prev file, <leader>cc comment, <leader>cr review, q close')
   let line += 1
   call append(line, '')
   let line += 1
