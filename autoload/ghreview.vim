@@ -12,6 +12,11 @@ let s:current_file_idx = 0
 let s:pending_comment = {}
 let s:showing_file = 0
 let s:patch_start_line = 1
+let s:suggest_hunks = []
+let s:suggest_idx = 0
+let s:suggest_mode = 0
+let s:suggest_submitted = 0
+let s:suggest_skipped = 0
 
 " Initialize the channel to the ghreview binary
 function! s:ensure_channel() abort
@@ -681,7 +686,7 @@ function! ghreview#add_comment(has_range, line1, line2) abort
 
   " Open comment edit buffer
   let bufname = 'ghreview://comment-edit'
-  execute 'belowright 10new ' . bufname
+  execute 'belowright 15new ' . bufname
 
   setlocal buftype=nofile
   setlocal bufhidden=wipe
@@ -742,8 +747,17 @@ function! ghreview#submit_comment() abort
     return
   endif
 
-  " Get comment body (skip header lines)
-  let lines = getline(3, '$')
+  " Get comment body (skip leading # header lines)
+  let all_lines = getline(1, '$')
+  let start = 0
+  for l in all_lines
+    if l =~ '^#'
+      let start += 1
+    else
+      break
+    endif
+  endfor
+  let lines = all_lines[start :]
   let body = join(lines, "\n")
   let body = trim(body)
 
@@ -774,6 +788,17 @@ function! ghreview#submit_comment() abort
 endfunction
 
 function! s:on_comment_added(result) abort
+  if s:suggest_mode
+    if a:result == v:null
+      echoerr 'Failed to add suggestion. Use <leader>cs to retry or <leader>cn to skip.'
+      return
+    endif
+    let s:suggest_submitted += 1
+    let s:suggest_idx += 1
+    call s:suggest_show_next()
+    return
+  endif
+
   let s:pending_comment = {}
 
   " Close the comment edit buffer
@@ -849,4 +874,279 @@ function! s:on_review_submitted(result) abort
   endif
 
   echo 'Review submitted: ' . a:result.state
+endfunction
+
+" Suggest changes from local edits as PR comments
+function! ghreview#suggest_changes() abort
+  " If PR is already loaded with diff files, proceed directly
+  if has_key(s:current_pr, 'number') && !empty(s:diff_files)
+    call s:do_suggest()
+    return
+  endif
+
+  " Otherwise, detect PR from current branch and fetch diff
+  let repo = s:get_repo()
+  if repo == ''
+    return
+  endif
+
+  let number = s:get_pr_for_branch()
+  if number == 0
+    return
+  endif
+
+  echo 'Fetching PR diff...'
+  let s:current_pr.number = number
+  call s:send_request('pr/diff', {'repo': repo, 'number': number}, function('s:on_suggest_diff'))
+endfunction
+
+function! s:on_suggest_diff(result) abort
+  if a:result == v:null
+    echo 'Failed to get diff'
+    return
+  endif
+
+  let s:current_pr = a:result
+  let s:diff_files = a:result.files
+
+  if len(s:diff_files) == 0
+    echo 'No files changed in this PR'
+    return
+  endif
+
+  call s:do_suggest()
+endfunction
+
+function! s:do_suggest() abort
+  let output = system('git diff -U0')
+  if v:shell_error != 0 || output == ''
+    echo 'No local changes found.'
+    return
+  endif
+
+  let all_hunks = s:parse_git_diff(output)
+  if empty(all_hunks)
+    echo 'No local changes found.'
+    return
+  endif
+
+  " Build list of PR filenames for filtering
+  let pr_files = {}
+  for file in s:diff_files
+    let pr_files[file.filename] = 1
+  endfor
+
+  " Filter hunks to PR files only and skip pure additions
+  let s:suggest_hunks = []
+  let skipped_non_pr = 0
+  let skipped_additions = 0
+  for hunk in all_hunks
+    if !has_key(pr_files, hunk.file)
+      let skipped_non_pr += 1
+      continue
+    endif
+    if hunk.old_count == 0
+      let skipped_additions += 1
+      continue
+    endif
+    call add(s:suggest_hunks, hunk)
+  endfor
+
+  if empty(s:suggest_hunks)
+    let msgs = ['No suggestable changes found.']
+    if skipped_non_pr > 0
+      call add(msgs, skipped_non_pr . ' change(s) skipped (not in PR files).')
+    endif
+    if skipped_additions > 0
+      call add(msgs, skipped_additions . ' pure addition(s) skipped (no original lines to attach to).')
+    endif
+    echo join(msgs, ' ')
+    return
+  endif
+
+  let warnings = []
+  if skipped_non_pr > 0
+    call add(warnings, skipped_non_pr . ' change(s) in non-PR files skipped.')
+  endif
+  if skipped_additions > 0
+    call add(warnings, skipped_additions . ' pure addition(s) skipped.')
+  endif
+  if !empty(warnings)
+    echohl WarningMsg
+    echo join(warnings, ' ')
+    echohl None
+  endif
+
+  let s:suggest_idx = 0
+  let s:suggest_mode = 1
+  let s:suggest_submitted = 0
+  let s:suggest_skipped = 0
+
+  call s:suggest_show_next()
+endfunction
+
+function! s:parse_git_diff(output) abort
+  let hunks = []
+  let current_file = ''
+
+  for line in split(a:output, '\n')
+    " Track current file
+    let file_match = matchlist(line, '^+++ b/\(.\+\)')
+    if !empty(file_match)
+      let current_file = file_match[1]
+      continue
+    endif
+
+    " Parse hunk header
+    let hunk_match = matchlist(line, '^@@ -\(\d\+\)\(,\(\d\+\)\)\? +\(\d\+\)\(,\(\d\+\)\)\? @@')
+    if !empty(hunk_match)
+      let old_start = str2nr(hunk_match[1])
+      let old_count = hunk_match[3] != '' ? str2nr(hunk_match[3]) : 1
+      let new_start = str2nr(hunk_match[4])
+      let new_count = hunk_match[6] != '' ? str2nr(hunk_match[6]) : 1
+      call add(hunks, {
+            \ 'file': current_file,
+            \ 'old_start': old_start,
+            \ 'old_count': old_count,
+            \ 'new_start': new_start,
+            \ 'new_count': new_count,
+            \ 'old_lines': [],
+            \ 'new_lines': [],
+            \ })
+      continue
+    endif
+
+    " Collect old/new lines within current hunk
+    if !empty(hunks)
+      if line =~ '^-'
+        call add(hunks[-1].old_lines, line[1:])
+      elseif line =~ '^+'
+        call add(hunks[-1].new_lines, line[1:])
+      endif
+    endif
+  endfor
+
+  return hunks
+endfunction
+
+function! s:suggest_show_next() abort
+  if s:suggest_idx >= len(s:suggest_hunks)
+    call s:suggest_finish()
+    return
+  endif
+
+  let hunk = s:suggest_hunks[s:suggest_idx]
+
+  " Set up pending comment
+  let end_line = hunk.old_start + hunk.old_count - 1
+  let s:pending_comment = {
+        \ 'path': hunk.file,
+        \ 'line': end_line,
+        \ 'start_line': hunk.old_count > 1 ? hunk.old_start : 0,
+        \ }
+
+  " Build line range display
+  let range_str = hunk.old_count > 1
+        \ ? hunk.old_start . '-' . end_line
+        \ : string(hunk.old_start)
+
+  " Open or reuse comment-edit buffer
+  let bufname = 'ghreview://comment-edit'
+  let bufnr = bufnr(bufname)
+  if bufnr != -1
+    " Switch to existing buffer
+    let winnr = bufwinnr(bufnr)
+    if winnr != -1
+      execute winnr . 'wincmd w'
+    else
+      execute 'belowright 15split +buffer' . bufnr
+    endif
+  else
+    execute 'belowright 15new ' . bufname
+  endif
+
+  setlocal buftype=nofile
+  setlocal bufhidden=hide
+  setlocal noswapfile
+  setlocal filetype=ghreview-comment-edit
+
+  setlocal modifiable
+  silent! %delete _
+
+  " Header
+  let header = []
+  call add(header, '# Suggest change ' . (s:suggest_idx + 1) . '/' . len(s:suggest_hunks) . ' on ' . hunk.file . ':' . range_str)
+  call add(header, '# <leader>cs submit | <leader>cn skip | q abort')
+  call add(header, '#')
+  call add(header, '# Current code:')
+  for old_line in hunk.old_lines
+    call add(header, '#   ' . old_line)
+  endfor
+  call add(header, '#')
+
+  " Body: blank line for user comment, then suggestion block
+  let body = ['', '```suggestion']
+  for new_line in hunk.new_lines
+    call add(body, new_line)
+  endfor
+  call add(body, '```')
+
+  call setline(1, header + body)
+  setlocal nomodified
+
+  " Place cursor on the blank line for user to type explanation
+  call cursor(len(header) + 1, 1)
+endfunction
+
+function! ghreview#suggest_skip() abort
+  let s:suggest_skipped += 1
+  let s:suggest_idx += 1
+  call s:suggest_show_next()
+endfunction
+
+function! ghreview#suggest_abort() abort
+  if !s:suggest_mode
+    " Not in suggest mode, just close the buffer
+    bdelete!
+    return
+  endif
+
+  let submitted = s:suggest_submitted
+  let skipped = s:suggest_skipped
+  let remaining = len(s:suggest_hunks) - s:suggest_idx
+
+  let s:suggest_hunks = []
+  let s:suggest_idx = 0
+  let s:suggest_mode = 0
+  let s:suggest_submitted = 0
+  let s:suggest_skipped = 0
+  let s:pending_comment = {}
+
+  " Close the comment edit buffer
+  let bufnr = bufnr('ghreview://comment-edit')
+  if bufnr != -1
+    execute 'bdelete! ' . bufnr
+  endif
+
+  echo 'Suggest aborted. Submitted: ' . submitted . ', Skipped: ' . skipped . ', Remaining: ' . remaining
+endfunction
+
+function! s:suggest_finish() abort
+  let submitted = s:suggest_submitted
+  let skipped = s:suggest_skipped
+
+  let s:suggest_hunks = []
+  let s:suggest_idx = 0
+  let s:suggest_mode = 0
+  let s:suggest_submitted = 0
+  let s:suggest_skipped = 0
+  let s:pending_comment = {}
+
+  " Close the comment edit buffer
+  let bufnr = bufnr('ghreview://comment-edit')
+  if bufnr != -1
+    execute 'bdelete! ' . bufnr
+  endif
+
+  echo 'All suggestions processed. Submitted: ' . submitted . ', Skipped: ' . skipped
 endfunction

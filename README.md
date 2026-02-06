@@ -53,6 +53,7 @@ Navigate to a git repository with a GitHub remote, then:
 | `:PRComments` | View comments on current PR |
 | `:PRComment` | Add comment on current line |
 | `:PRReview` | Submit a review |
+| `:PRSuggest` | Turn local edits into GitHub suggestion comments |
 
 Examples:
 - `:PRList` - List open PRs from origin
@@ -79,6 +80,11 @@ Examples:
 **In comment edit buffer:**
 - `<leader>cs` - Submit comment
 - `q` - Cancel
+
+**In suggest mode (`:PRSuggest`):**
+- `<leader>cs` - Submit current suggestion
+- `<leader>cn` - Skip current suggestion
+- `q` - Abort remaining suggestions
 
 ## Configuration
 

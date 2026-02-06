@@ -19,6 +19,7 @@ command! -nargs=? PRDiff call ghreview#diff(<args>)
 command! PRComments call ghreview#comments()
 command! -range PRComment call ghreview#add_comment(<range>, <line1>, <line2>)
 command! -nargs=? PRReview call ghreview#review(<q-args>)
+command! PRSuggest call ghreview#suggest_changes()
 
 " Keymaps for PR buffers (set in ftplugin or after buffer creation)
 augroup ghreview
@@ -40,5 +41,6 @@ augroup ghreview
   autocmd FileType ghreview-comments nnoremap <buffer> <CR> :call ghreview#goto_comment()<CR>
   autocmd FileType ghreview-comments nnoremap <buffer> q :bdelete<CR>
   autocmd FileType ghreview-comment-edit nnoremap <buffer> <leader>cs :call ghreview#submit_comment()<CR>
-  autocmd FileType ghreview-comment-edit nnoremap <buffer> q :bdelete!<CR>
+  autocmd FileType ghreview-comment-edit nnoremap <buffer> <leader>cn :call ghreview#suggest_skip()<CR>
+  autocmd FileType ghreview-comment-edit nnoremap <buffer> q :call ghreview#suggest_abort()<CR>
 augroup END

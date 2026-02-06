@@ -64,6 +64,7 @@ Plug 'github.com/tbruyelle/ghreview'
 | `:PRComments` | View comments on current PR |
 | `:PRComment` | Add comment on current line |
 | `:PRReview [event]` | Submit review (APPROVE/REQUEST_CHANGES/COMMENT) |
+| `:PRSuggest` | Turn local edits into GitHub suggestion comments |
 
 ## Key Bindings (in PR buffers)
 
@@ -84,6 +85,11 @@ Plug 'github.com/tbruyelle/ghreview'
 **Comment edit:**
 - `<leader>cs` - Submit comment
 - `q` - Cancel
+
+**Suggest mode (`:PRSuggest`):**
+- `<leader>cs` - Submit current suggestion
+- `<leader>cn` - Skip current suggestion
+- `q` - Abort remaining suggestions
 
 ## JSON-RPC Methods
 

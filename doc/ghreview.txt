@@ -49,6 +49,16 @@ COMMANDS                                        *ghreview-commands*
                         can be "APPROVE", "REQUEST_CHANGES", or "COMMENT".
                         If omitted, shows an interactive menu.
 
+                                                *:PRSuggest*
+:PRSuggest              Turn local edits into GitHub suggestion comments.
+                        Runs `git diff -U0` to find changes, then iterates
+                        through each hunk, opening a comment buffer pre-filled
+                        with a suggestion block. If no PR is loaded, detects
+                        the PR from the current branch automatically. Only
+                        changes in files that are part of the PR diff are
+                        included. Pure additions (no original lines) are
+                        skipped.
+
 MAPPINGS                                        *ghreview-mappings*
 
 PR List buffer~
@@ -79,6 +89,14 @@ Comment edit~
                                                 *ghreview-comment-edit-mappings*
 <Leader>cs              Submit the comment.
 q                       Cancel and close the buffer.
+
+Suggest mode~
+                                                *ghreview-suggest-mappings*
+When using |:PRSuggest|, the comment edit buffer has additional mappings:
+
+<Leader>cs              Submit the current suggestion.
+<Leader>cn              Skip the current suggestion and move to the next.
+q                       Abort and stop processing remaining suggestions.
 
 CONFIGURATION                                   *ghreview-config*
 
