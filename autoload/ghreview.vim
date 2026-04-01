@@ -282,7 +282,7 @@ function! s:on_pr_diff(result) abort
   endif
 
   " Checkout the PR branch
-  call s:checkout_pr_branch(a:result.head_branch)
+  call s:checkout_pr_branch(a:result.head_branch, a:result.number)
 
   " First show the diff
   call s:show_current_file()
@@ -291,7 +291,7 @@ function! s:on_pr_diff(result) abort
   call s:populate_qflist()
 endfunction
 
-function! s:checkout_pr_branch(branch) abort
+function! s:checkout_pr_branch(branch, number) abort
   if a:branch == ''
     return
   endif
@@ -301,16 +301,12 @@ function! s:checkout_pr_branch(branch) abort
     return
   endif
 
-  silent let output = system('git checkout ' . shellescape(a:branch) . ' 2>&1')
+  silent let output = system('gh pr checkout ' . a:number . ' 2>&1')
   if v:shell_error != 0
-    " Try to fetch and checkout if branch doesn't exist locally
-    silent let output = system('git fetch origin ' . shellescape(a:branch) . ' && git checkout ' . shellescape(a:branch) . ' 2>&1')
-    if v:shell_error != 0
-      echohl WarningMsg
-      echo 'Could not checkout branch ' . a:branch . ': ' . trim(output)
-      echohl None
-      return
-    endif
+    echohl WarningMsg
+    echo 'Could not checkout branch ' . a:branch . ': ' . trim(output)
+    echohl None
+    return
   endif
 endfunction
 
