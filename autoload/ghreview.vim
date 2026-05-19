@@ -281,14 +281,14 @@ function! s:on_pr_diff(result) abort
     return
   endif
 
-  " Checkout the PR branch
-  call s:checkout_pr_branch(a:result.head_branch, a:result.number)
-
   " First show the diff
   call s:show_current_file()
 
   " Then populate and open quickfix list
   call s:populate_qflist()
+
+  " Checkout the PR branch last so any warning isn't overwritten by qflist output
+  call s:checkout_pr_branch(a:result.head_branch, a:result.number)
 endfunction
 
 function! s:checkout_pr_branch(branch, number) abort
@@ -304,7 +304,7 @@ function! s:checkout_pr_branch(branch, number) abort
   silent let output = system('gh pr checkout ' . a:number . ' 2>&1')
   if v:shell_error != 0
     echohl WarningMsg
-    echo 'Could not checkout branch ' . a:branch . ': ' . trim(output)
+    echom 'Could not checkout branch ' . a:branch . ': ' . trim(output)
     echohl None
     return
   endif
